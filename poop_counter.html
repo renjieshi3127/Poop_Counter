@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一起拉屎 - Poop Together</title>
+    
+    <!-- 引入 TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: '#A1887F',
+                            DEFAULT: '#795548', // 核心屎色
+                            dark: '#4E342E',
+                        },
+                        accent: {
+                            DEFAULT: '#FDD835', // 强调黄
+                            hover: '#FBC02D'
+                        },
+                        bg: '#FFFCF5', // 柔和米白
+                        surface: '#FFFFFF'
+                    },
+                    fontFamily: {
+                        sans: ['"Nunito"', '"Noto Sans SC"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(121, 85, 72, 0.08)',
+                        'float': '0 10px 30px -5px rgba(121, 85, 72, 0.2)',
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* 隐藏滚动条但允许滚动 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 页面切换动画 */
+        .page-transition {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        .page-hidden {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scale(0.95);
+            z-index: -1;
+        }
+
+        .page-active {
+            opacity: 1;
+            pointer-events: auto;
+            position: relative;
+            transform: scale(1);
+            z-index: 10;
+        }
+
+        /* 涟漪特效 */
+        .ripple-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+        }
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(121, 85, 72, 0.1);
+            animation: ripple-anim 3s infinite linear;
+        }
+        .ripple:nth-child(1) { width: 200px; height: 200px; animation-delay: 0s; }
+        .ripple:nth-child(2) { width: 200px; height: 200px; animation-delay: 1s; }
+        .ripple:nth-child(3) { width: 200px; height: 200px; animation-delay: 2s; }
+
+        @keyframes ripple-anim {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* 弹幕动画 */
+        @keyframes danmaku {
+            from { transform: translateX(100%); }
+            to { transform: translateX(-150%); }
+        }
+        .danmaku-item {
+            white-space: nowrap;
+            animation: danmaku 8s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen w-screen overflow-hidden flex justify-center text-gray-800">
+
+    <!-- 移动端容器模拟 -->
+    <div class="w-full max-w-md h-full bg-bg shadow-2xl relative flex flex-col overflow-hidden">
+        
+        <!-- 顶部状态栏占位 -->
+        <div class="h-10 w-full bg-transparent z-50 flex justify-between items-center px-6 pt-2 select-none">
+            <span class="text-xs font-bold text-brand-dark" id="system-time">14:30</span>
+            <div class="flex gap-1.5">
+                <div class="w-4 h-4 rounded-full bg-black/10 flex items-center justify-center"><i class="fas fa-signal text-[8px]"></i></div>
+                <div class="w-4 h-4 rounded-full bg-black/10 flex items-center justify-center"><i class="fas fa-wifi text-[8px]"></i></div>
+                <div class="w-4 h-4 rounded-full bg-black/10 flex items-center justify-center"><i class="fas fa-battery-full text-[8px]"></i></div>
+            </div>
+        </div>
+
+        <!-- ================= 应用主内容区 ================= -->
+        <main class="flex-1 relative w-full overflow-hidden" id="main-container">
+            
+            <!-- 1. 首页 (Home) -->
+            <div id="page-home" class="page-active h-full flex flex-col px-6 pt-4 pb-24 overflow-y-auto no-scrollbar transition-all duration-300">
+                <!-- 头部 -->
+                <div class="flex justify-between items-start mb-8">
+                    <div>
+                        <h1 class="text-2xl font-extrabold text-brand-dark">嘿，<br>要释放一下吗？</h1>
+                        <div class="flex items-center gap-2 mt-2 bg-white px-3 py-1 rounded-full shadow-sm w-fit">
+                            <span class="relative flex h-2 w-2">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            <span class="text-xs font-bold text-brand-light">当前 <span class="text-brand">1,024</span> 人在线</span>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border-2 border-white shadow-sm">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User">
+                    </div>
+                </div>
+
+                <!-- 核心按钮区 -->
+                <div class="flex-1 flex flex-col items-center justify-center relative">
+                    <!-- 背景装饰 -->
+                    <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+                    <div class="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+                    <div class="absolute -bottom-8 left-20 w-72 h-72 bg-brand-light rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+
+                    <!-- 涟漪 -->
+                    <div class="ripple-container">
+                        <div class="ripple"></div>
+                        <div class="ripple"></div>
+                        <div class="ripple"></div>
+                    </div>
+
+                    <!-- 大按钮 -->
+                    <button onclick="app.startSession()" class="relative z-10 w-48 h-48 bg-gradient-to-br from-brand-light to-brand text-white rounded-[40px] shadow-float flex flex-col items-center justify-center transform transition-all active:scale-95 group">
+                        <div class="text-5xl mb-3 group-hover:scale-110 transition-transform">💩</div>
+                        <span class="font-bold text-xl tracking-wide">开始</span>
+                        <span class="text-xs text-white/70 mt-1">记录美好时刻</span>
+                    </button>
+                    
+                    <p class="mt-8 text-sm text-brand-light/80 font-medium">上次时长: 08分24秒</p>
+                </div>
+
+                <!-- 每日小贴士 -->
+                <div class="mt-auto bg-white p-4 rounded-2xl shadow-soft border border-gray-100 flex gap-4 items-center">
+                    <div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent text-lg flex-shrink-0">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase">健康小贴士</h3>
+                        <p class="text-sm text-brand-dark font-medium leading-tight">多喝水，多吃膳食纤维，保持心情愉快。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 进行中 (Session) -->
+            <div id="page-session" class="page-hidden h-full flex flex-col relative bg-brand-dark text-white overflow-hidden">
+                <!-- 背景遮罩 -->
+                <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519750783826-e2420f4d687f?ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80')] bg-cover bg-center opacity-10"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-brand-dark/50 via-brand-dark/80 to-brand-dark"></div>
+
+                <!-- 内容 -->
+                <div class="relative z-10 flex flex-col h-full p-6">
+                    <div class="flex justify-between items-center">
+                        <button onclick="app.minimizeSession()" class="text-white/50 hover:text-white"><i class="fas fa-chevron-down"></i></button>
+                        <span class="text-xs font-bold bg-white/10 px-3 py-1 rounded-full text-accent">正在进行中...</span>
+                        <button class="text-white/50 hover:text-white"><i class="fas fa-cog"></i></button>
+                    </div>
+
+                    <!-- 计时器 -->
+                    <div class="mt-10 flex flex-col items-center">
+                        <div class="text-7xl font-mono font-bold tracking-tighter" id="timer-display">00:00</div>
+                        <p class="text-white/50 text-sm mt-2">专注此刻</p>
+                    </div>
+
+                    <!-- 弹幕区域 (模拟) -->
+                    <div class="flex-1 mt-8 relative overflow-hidden mask-image-gradient" id="danmaku-container">
+                        <!-- 弹幕将通过JS插入 -->
+                        <div class="absolute top-4 left-0 w-full h-8 flex items-center">
+                            <div class="bg-black/30 backdrop-blur-md px-3 py-1 rounded-full text-xs text-white border border-white/10 flex items-center gap-2 animate-float" style="left: 10%">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Coco" class="w-4 h-4 rounded-full">
+                                <span>兄弟们腿麻了吗？</span>
+                            </div>
+                        </div>
+                        <div class="absolute top-16 right-0 w-full h-8 flex justify-end items-center">
+                            <div class="bg-black/30 backdrop-blur-md px-3 py-1 rounded-full text-xs text-white border border-white/10 flex items-center gap-2 animate-float" style="animation-delay: 1s; margin-right: 10%;">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Jack" class="w-4 h-4 rounded-full">
+                                <span>带薪拉屎最快乐！</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 互动操作 -->
+                    <div class="mb-8">
+                        <div class="flex justify-center gap-6 mb-8">
+                            <button onclick="app.sendReaction('💨')" class="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-2xl hover:bg-accent hover:text-brand-dark transition-colors active:scale-90">💨</button>
+                            <button onclick="app.sendReaction('🧻')" class="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-2xl hover:bg-accent hover:text-brand-dark transition-colors active:scale-90">🧻</button>
+                            <button onclick="app.sendReaction('📰')" class="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-2xl hover:bg-accent hover:text-brand-dark transition-colors active:scale-90">📰</button>
+                        </div>
+                        
+                        <!-- 滑动结束 -->
+                        <button onclick="app.endSession()" class="w-full bg-accent hover:bg-accent-hover text-brand-dark font-bold py-4 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                            <i class="fas fa-check-circle"></i>
+                            <span>完成并记录</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 统计页 (Stats) -->
+            <div id="page-stats" class="page-hidden h-full flex flex-col p-6 overflow-y-auto no-scrollbar pb-24">
+                <h2 class="text-xl font-bold text-brand-dark mb-6">健康周报</h2>
+                
+                <!-- 统计卡片 -->
+                <div class="bg-white p-5 rounded-2xl shadow-soft mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-sm font-bold text-gray-500">本周频率热力图</h3>
+                        <i class="fas fa-ellipsis-h text-gray-300"></i>
+                    </div>
+                    <!-- 模拟柱状图 -->
+                    <div class="flex justify-between items-end h-32 w-full px-2">
+                        <div class="flex flex-col items-center gap-2 group">
+                            <div class="w-8 bg-brand/20 rounded-t-lg h-[40%] group-hover:bg-brand transition-colors relative"></div>
+                            <span class="text-xs text-gray-400">一</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2 group">
+                            <div class="w-8 bg-brand/20 rounded-t-lg h-[60%] group-hover:bg-brand transition-colors relative"></div>
+                            <span class="text-xs text-gray-400">二</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2 group">
+                            <div class="w-8 bg-brand/20 rounded-t-lg h-[20%] group-hover:bg-brand transition-colors relative"></div>
+                            <span class="text-xs text-gray-400">三</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2 group">
+                            <div class="w-8 bg-brand rounded-t-lg h-[80%] shadow-lg shadow-brand/30 relative">
+                                <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-brand-dark text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">12分</div>
+                            </div>
+                            <span class="text-xs font-bold text-brand">四</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2 group">
+                            <div class="w-8 bg-brand/20 rounded-t-lg h-[30%] group-hover:bg-brand transition-colors relative"></div>
+                            <span class="text-xs text-gray-400">五</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2 group">
+                            <div class="w-8 bg-gray-100 rounded-t-lg h-[10%] group-hover:bg-brand transition-colors relative"></div>
+                            <span class="text-xs text-gray-400">六</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 形状记录列表 -->
+                <h3 class="text-sm font-bold text-gray-500 mb-4">最近记录</h3>
+                <div class="space-y-3">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-50 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-xl">🍌</div>
+                            <div>
+                                <p class="text-sm font-bold text-brand-dark">完美香蕉型</p>
+                                <p class="text-xs text-gray-400">今天 14:20</p>
+                            </div>
+                        </div>
+                        <span class="text-sm font-bold text-brand-light">12min</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-50 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-xl">🌰</div>
+                            <div>
+                                <p class="text-sm font-bold text-brand-dark">坚硬栗子型</p>
+                                <p class="text-xs text-gray-400">昨天 09:15</p>
+                            </div>
+                        </div>
+                        <span class="text-sm font-bold text-brand-light">25min</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 4. 我的 (Profile) - 占位 -->
+            <div id="page-profile" class="page-hidden h-full flex flex-col items-center justify-center text-gray-400">
+                <i class="fas fa-hammer text-4xl mb-2"></i>
+                <p>功能开发中...</p>
+            </div>
+
+        </main>
+
+        <!-- 底部导航栏 (Dock) -->
+        <nav class="absolute bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-gray-100 pb-6 pt-3 px-6 z-40 transition-transform duration-300" id="bottom-nav">
+            <div class="flex justify-between items-center">
+                <button onclick="app.switchTab('home')" class="nav-item active flex flex-col items-center gap-1 w-12 text-brand transition-colors">
+                    <i class="fas fa-toilet text-xl"></i>
+                    <span class="text-[10px] font-bold">马桶</span>
+                </button>
+                <button onclick="app.switchTab('stats')" class="nav-item flex flex-col items-center gap-1 w-12 text-gray-300 hover:text-brand-light transition-colors">
+                    <i class="fas fa-chart-pie text-xl"></i>
+                    <span class="text-[10px] font-bold">统计</span>
+                </button>
+                <div class="w-12"></div> <!-- 中间留空给悬浮按钮 -->
+                <button onclick="app.switchTab('map')" class="nav-item flex flex-col items-center gap-1 w-12 text-gray-300 hover:text-brand-light transition-colors">
+                    <i class="fas fa-map-marked-alt text-xl"></i>
+                    <span class="text-[10px] font-bold">附近</span>
+                </button>
+                <button onclick="app.switchTab('profile')" class="nav-item flex flex-col items-center gap-1 w-12 text-gray-300 hover:text-brand-light transition-colors">
+                    <i class="fas fa-user text-xl"></i>
+                    <span class="text-[10px] font-bold">我的</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- 中间悬浮按钮 (FAB) -->
+        <button onclick="app.startSession()" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-14 h-14 bg-brand text-white rounded-full shadow-lg shadow-brand/40 flex items-center justify-center text-2xl z-50 hover:scale-105 transition-transform" id="fab-btn">
+            <i class="fas fa-plus"></i>
+        </button>
+
+        <!-- 模拟 Toast 提示 -->
+        <div id="toast" class="absolute top-12 left-1/2 transform -translate-x-1/2 bg-brand-dark/90 text-white text-xs px-4 py-2 rounded-full shadow-lg opacity-0 transition-opacity z-[60] pointer-events-none flex items-center gap-2">
+            <i class="fas fa-check-circle text-green-400"></i>
+            <span id="toast-msg">操作成功</span>
+        </div>
+
+    </div>
+
+    <script>
+        // 应用逻辑封装
+        const app = {
+            state: {
+                timerInterval: null,
+                seconds: 0,
+                isSessionActive: false,
+                currentTab: 'home'
+            },
+
+            init: function() {
+                this.updateTime();
+                setInterval(this.updateTime, 1000);
+                this.mockDanmaku();
+            },
+
+            updateTime: function() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                document.getElementById('system-time').innerText = timeString;
+            },
+
+            switchTab: function(tabName) {
+                if (this.state.isSessionActive) {
+                    this.showToast('请先结束当前的释放行程');
+                    return;
+                }
+
+                // UI 更新
+                document.querySelectorAll('.nav-item').forEach(btn => {
+                    const icon = btn.querySelector('i');
+                    const text = btn.querySelector('span');
+                    
+                    if (btn.getAttribute('onclick').includes(tabName)) {
+                        btn.classList.remove('text-gray-300');
+                        btn.classList.add('text-brand');
+                    } else {
+                        btn.classList.add('text-gray-300');
+                        btn.classList.remove('text-brand');
+                    }
+                });
+
+                // 页面切换
+                document.querySelectorAll('main > div').forEach(page => {
+                    page.classList.remove('page-active');
+                    page.classList.add('page-hidden');
+                });
+                
+                const targetPage = document.getElementById(`page-${tabName}`) || document.getElementById('page-profile');
+                targetPage.classList.remove('page-hidden');
+                targetPage.classList.add('page-active');
+
+                this.state.currentTab = tabName;
+            },
+
+            startSession: function() {
+                this.state.isSessionActive = true;
+                
+                // 切换到 session 页
+                document.querySelectorAll('main > div').forEach(page => {
+                    page.classList.remove('page-active');
+                    page.classList.add('page-hidden');
+                });
+                document.getElementById('page-session').classList.remove('page-hidden');
+                document.getElementById('page-session').classList.add('page-active');
+
+                // 隐藏底部导航
+                document.getElementById('bottom-nav').style.transform = 'translateY(100%)';
+                document.getElementById('fab-btn').style.transform = 'translate(-50%, 200%)';
+
+                // 开始计时
+                this.state.seconds = 0;
+                document.getElementById('timer-display').innerText = "00:00";
+                this.state.timerInterval = setInterval(() => {
+                    this.state.seconds++;
+                    const mins = Math.floor(this.state.seconds / 60).toString().padStart(2, '0');
+                    const secs = (this.state.seconds % 60).toString().padStart(2, '0');
+                    document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+                }, 1000);
+
+                this.showToast('开始记录...享受此刻');
+            },
+
+            endSession: function() {
+                clearInterval(this.state.timerInterval);
+                this.state.isSessionActive = false;
+                
+                // 恢复 UI
+                document.getElementById('bottom-nav').style.transform = 'translateY(0)';
+                document.getElementById('fab-btn').style.transform = 'translate(-50%, 0)';
+                
+                this.switchTab('stats');
+                this.showToast(`记录成功！本次时长 ${document.getElementById('timer-display').innerText}`);
+            },
+
+            minimizeSession: function() {
+                this.showToast('功能开发中：最小化浮窗');
+            },
+
+            sendReaction: function(emoji) {
+                // 模拟发送漂浮表情
+                const container = document.getElementById('danmaku-container');
+                const el = document.createElement('div');
+                el.innerText = emoji;
+                el.className = 'absolute text-4xl animate-bounce';
+                el.style.left = Math.random() * 80 + 10 + '%';
+                el.style.bottom = '0';
+                el.style.transition = 'all 2s ease-out';
+                el.style.opacity = '1';
+                
+                container.appendChild(el);
+
+                setTimeout(() => {
+                    el.style.transform = `translateY(-400px) scale(1.5)`;
+                    el.style.opacity = '0';
+                }, 50);
+
+                setTimeout(() => {
+                    el.remove();
+                }, 2000);
+            },
+
+            showToast: function(msg) {
+                const toast = document.getElementById('toast');
+                const msgEl = document.getElementById('toast-msg');
+                msgEl.innerText = msg;
+                toast.style.opacity = '1';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                }, 3000);
+            },
+            
+            mockDanmaku: function() {
+                const messages = [
+                    "腿麻了...", "加油！", "今天第三次了", "有人在上海吗？", "这软件有毒哈哈", "坚持住兄弟"
+                ];
+                const container = document.getElementById('danmaku-container');
+
+                setInterval(() => {
+                    if (!this.state.isSessionActive) return;
+                    
+                    const text = messages[Math.floor(Math.random() * messages.length)];
+                    const div = document.createElement('div');
+                    div.className = 'absolute bg-black/20 backdrop-blur px-3 py-1 rounded-full text-xs text-white border border-white/10 flex items-center gap-2';
+                    div.style.top = Math.random() * 60 + 20 + '%';
+                    div.style.left = '100%';
+                    div.style.transition = 'left 5s linear';
+                    div.innerHTML = `<img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}" class="w-4 h-4 rounded-full"><span>${text}</span>`;
+                    
+                    container.appendChild(div);
+
+                    // 触发动画
+                    requestAnimationFrame(() => {
+                        div.style.left = '-200px';
+                    });
+
+                    // 清理
+                    setTimeout(() => div.remove(), 5000);
+                }, 2000);
+            }
+        };
+
+        // 启动应用
+        app.init();
+    </script>
+</body>
+</html>
